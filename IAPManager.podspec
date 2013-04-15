@@ -8,7 +8,7 @@ Pod::Spec.new do |s|
 
   s.author       = { "Marcel Ruegenberg" => "github@dustlab.com" }
 
-  s.source       = { :git => "https://github.com/mruegenberg/IAPManager.git", :tag => "0.2.0" }
+  s.source       = { :git => "https://github.com/luosheng/IAPManager.git" }
 
   s.platform     = :ios, '5.0'
   s.requires_arc = true
