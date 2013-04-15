@@ -29,8 +29,6 @@ typedef void(^RestorePurchasesCompletionBlock)(NSArray *transactions);
 
 + (IAPManager *)sharedIAPManager;
 
-- (BOOL)hasPurchased:(NSString *)productId;
-
 #pragma mark Product Information
 
 // passes a set of products to the completion block

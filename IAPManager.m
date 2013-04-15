@@ -12,9 +12,8 @@ NSString * const IAPManagerIncreaseWaitingCountNotification = @"tc.tangcha.iap.i
 NSString * const IAPManagerDecreaseWaitingCountNotification = @"tc.tangcha.iap.derease";
 
 @interface IAPManager () <SKProductsRequestDelegate, SKPaymentTransactionObserver>
-@property (strong) NSMutableArray *purchasedItems;
+
 @property (strong) NSMutableDictionary *products;
-@property BOOL purchasedItemsChanged;
 
 @property (strong) NSMutableArray *productRequests;
 @property (strong) NSMutableArray *payments;
@@ -24,11 +23,6 @@ NSString * const IAPManagerDecreaseWaitingCountNotification = @"tc.tangcha.iap.d
 @property (copy) RestorePurchasesCompletionBlock restoreCompletionBlock;
 
 @end
-
-NSURL *purchasesURL() {
-    NSURL *appDocDir = [[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] lastObject];
-    return [appDocDir URLByAppendingPathComponent:@".purchases.plist"];
-}
 
 @implementation IAPManager
 
@@ -40,35 +34,13 @@ NSURL *purchasesURL() {
 
 - (id)init {
     if((self = [super init])) {
-        self.purchasedItems = [NSMutableArray arrayWithContentsOfURL:purchasesURL()];
-        if(self.purchasedItems == nil) {
-            self.purchasedItems = [NSMutableArray array];
-            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(willResignActive:) name:UIApplicationWillResignActiveNotification object:nil];
-            [[SKPaymentQueue defaultQueue] addTransactionObserver:self];
-        }
+        [[SKPaymentQueue defaultQueue] addTransactionObserver:self];
         self.products = [NSMutableDictionary dictionary];
         self.productRequests = [NSMutableArray array];
         self.payments = [NSMutableArray array];
         self.purchasesChangedCallbacks = [NSMutableArray array];
     }
     return self;
-}
-
-- (void)persistPurchasedItems {
-  BOOL success = [self.purchasedItems writeToURL:purchasesURL() atomically:YES];
-  if(! success) {
-      NSLog(@"Saving purchases to %@ failed!", purchasesURL());
-  }
-}
-
-- (void)willResignActive:(NSNotification *)notification {
-    if(self.purchasedItemsChanged) {
-      [self persistPurchasedItems];
-    }
-}
-
-- (BOOL)hasPurchased:(NSString *)productID {
-    return [self.purchasedItems containsObject:productID];
 }
 
 #pragma mark - Product Information
@@ -175,14 +147,11 @@ NSURL *purchasesURL() {
 			[[NSNotificationCenter defaultCenter] postNotificationName:IAPManagerIncreaseWaitingCountNotification object:nil];
 		}
         else if(transaction.transactionState == SKPaymentTransactionStatePurchased ||
-           transaction.transactionState == SKPaymentTransactionStateRestored) {
-            [self.purchasedItems addObject:transaction.payment.productIdentifier];
-            [self persistPurchasedItems]; // be extra safe
+				transaction.transactionState == SKPaymentTransactionStateRestored) {
             for(NSArray *t in self.purchasesChangedCallbacks) {
                 PurchasedProductsChanged callback = t[0];
                 callback();
             }
-            self.purchasedItemsChanged = YES;
             [queue finishTransaction:transaction];
             if(completion) completion(transaction);
 			if (transaction.transactionState == SKPaymentTransactionStatePurchased) {
