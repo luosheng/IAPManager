@@ -58,3 +58,6 @@ typedef void(^RestorePurchasesCompletionBlock)(NSArray *transactions);
 - (void)removePurchasesChangedCallbackWithContext:(id)context;
 
 @end
+
+extern NSString * const IAPManagerIncreaseWaitingCountNotification;
+extern NSString * const IAPManagerDecreaseWaitingCountNotification;

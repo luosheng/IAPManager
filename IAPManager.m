@@ -8,6 +8,9 @@
 
 #import "IAPManager.h"
 
+NSString * const IAPManagerIncreaseWaitingCountNotification = @"tc.tangcha.iap.inrease";
+NSString * const IAPManagerDecreaseWaitingCountNotification = @"tc.tangcha.iap.derease";
+
 @interface IAPManager () <SKProductsRequestDelegate, SKPaymentTransactionObserver>
 @property (strong) NSMutableArray *purchasedItems;
 @property (strong) NSMutableDictionary *products;
@@ -111,6 +114,7 @@ NSURL *purchasesURL() {
 }
 
 - (void)restorePurchasesWithCompletion:(RestorePurchasesCompletionBlock)completionBlock {
+    [[NSNotificationCenter defaultCenter] postNotificationName:IAPManagerIncreaseWaitingCountNotification object:nil];
     self.restoreCompletionBlock = completionBlock;
     return [[SKPaymentQueue defaultQueue] restoreCompletedTransactions];
 }
@@ -166,7 +170,11 @@ NSURL *purchasesURL() {
             }
         }
         
-        if(transaction.transactionState == SKPaymentTransactionStatePurchased ||
+		
+		if (transaction.transactionState == SKPaymentTransactionStatePurchasing) {
+			[[NSNotificationCenter defaultCenter] postNotificationName:IAPManagerIncreaseWaitingCountNotification object:nil];
+		}
+        else if(transaction.transactionState == SKPaymentTransactionStatePurchased ||
            transaction.transactionState == SKPaymentTransactionStateRestored) {
             [self.purchasedItems addObject:transaction.payment.productIdentifier];
             [self persistPurchasedItems]; // be extra safe
@@ -177,9 +185,13 @@ NSURL *purchasesURL() {
             self.purchasedItemsChanged = YES;
             [queue finishTransaction:transaction];
             if(completion) completion(transaction);
+			if (transaction.transactionState == SKPaymentTransactionStatePurchased) {
+				[[NSNotificationCenter defaultCenter] postNotificationName:IAPManagerDecreaseWaitingCountNotification object:nil];
+			}
         }
         else if(transaction.transactionState == SKPaymentTransactionStateFailed) {
             if(err) err(transaction.error);
+			[[NSNotificationCenter defaultCenter] postNotificationName:IAPManagerDecreaseWaitingCountNotification object:nil];
         }
     }
 }
@@ -209,6 +221,11 @@ NSURL *purchasesURL() {
         self.restoreCompletionBlock(queue.transactions);
     }
     self.restoreCompletionBlock = nil;
+    [[NSNotificationCenter defaultCenter] postNotificationName:IAPManagerDecreaseWaitingCountNotification object:nil];
+}
+
+- (void)paymentQueue:(SKPaymentQueue *)queue restoreCompletedTransactionsFailedWithError:(NSError *)error {
+    [[NSNotificationCenter defaultCenter] postNotificationName:IAPManagerDecreaseWaitingCountNotification object:nil];
 }
 
 @end
