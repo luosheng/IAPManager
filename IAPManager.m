@@ -206,7 +206,7 @@ NSURL *purchasesURL() {
 
 - (void)paymentQueueRestoreCompletedTransactionsFinished:(SKPaymentQueue *)queue {
     if (self.restoreCompletionBlock) {
-        self.restoreCompletionBlock();
+        self.restoreCompletionBlock(queue.transactions);
     }
     self.restoreCompletionBlock = nil;
 }
