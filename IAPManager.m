@@ -142,21 +142,20 @@ NSString *const IAPManagerDecreaseWaitingCountNotification = @"tc.tangcha.iap.de
 
         if (transaction.transactionState == SKPaymentTransactionStatePurchasing) {
             [[NSNotificationCenter defaultCenter] postNotificationName:IAPManagerIncreaseWaitingCountNotification object:nil];
-        } else if (transaction.transactionState == SKPaymentTransactionStatePurchased ||
-                   transaction.transactionState == SKPaymentTransactionStateRestored) {
-            for (NSArray *t in self.purchasesChangedCallbacks) {
-                PurchasedProductsChanged callback = t[0];
-                callback();
-            }
+        } else {
             [queue finishTransaction:transaction];
-            if (completion) completion(transaction);
+            
             if (transaction.transactionState == SKPaymentTransactionStatePurchased) {
+                for (NSArray *t in self.purchasesChangedCallbacks) {
+                    PurchasedProductsChanged callback = t[0];
+                    callback();
+                }
+                if (completion) completion(transaction);
+                [[NSNotificationCenter defaultCenter] postNotificationName:IAPManagerDecreaseWaitingCountNotification object:nil];
+            } else if (transaction.transactionState == SKPaymentTransactionStateFailed) {
+                if (err) err(transaction.error);
                 [[NSNotificationCenter defaultCenter] postNotificationName:IAPManagerDecreaseWaitingCountNotification object:nil];
             }
-        } else if (transaction.transactionState == SKPaymentTransactionStateFailed) {
-            if (err) err(transaction.error);
-            [queue finishTransaction:transaction];
-            [[NSNotificationCenter defaultCenter] postNotificationName:IAPManagerDecreaseWaitingCountNotification object:nil];
         }
     }
 }
@@ -191,6 +190,19 @@ NSString *const IAPManagerDecreaseWaitingCountNotification = @"tc.tangcha.iap.de
 
 - (void)paymentQueue:(SKPaymentQueue *)queue restoreCompletedTransactionsFailedWithError:(NSError *)error {
     [[NSNotificationCenter defaultCenter] postNotificationName:IAPManagerDecreaseWaitingCountNotification object:nil];
+}
+
+- (void)paymentQueue:(SKPaymentQueue *)queue removedTransactions:(NSArray *)transactions {
+    for (SKPaymentTransaction *transaction in transactions) {
+        NSUInteger c = [self.payments count];
+        for (int i = 0; i < c; ++i) {
+            NSArray *t = [self.payments objectAtIndex:i];
+            if ([t[0] isEqual:transaction.payment.productIdentifier]) {
+                [self.payments removeObjectAtIndex:i];
+                break;
+            }
+        }
+    }
 }
 
 @end
